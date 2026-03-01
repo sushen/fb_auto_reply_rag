@@ -47,12 +47,26 @@ def cms():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
+    if 'file' not in request.files and 'files[]' not in request.files:
         flash('No file part')
         return redirect(request.url)
     
-    file = request.files['file']
+    # Check if it's a folder upload (multiple files)
+    files = request.files.getlist('files[]')
     
+    if files and files[0].filename:
+        # Folder upload
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename or "")
+                if filename:
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
+        flash(f'Successfully uploaded {len([f for f in files if f.filename])} files')
+        return redirect(url_for('cms'))
+    
+    # Single file upload (fallback)
+    file = request.files.get('file')
     if file.filename == '':
         flash('No selected file')
         return redirect(request.url)
@@ -65,8 +79,28 @@ def upload_file():
         flash('File successfully uploaded')
         return redirect(url_for('cms'))
     else:
-        flash('Allowed file types are txt, pdf, docx, md, pptx, csv')
-        return redirect(request.url)
+        flash('Allowed file types are txt, pdf, docx, csv')
+        return redirect(url_for('cms'))
+
+@app.route('/upload-folder', methods=['POST'])
+def upload_folder():
+    files = request.files.getlist('files')
+    
+    if not files or not files[0].filename:
+        flash('No files selected')
+        return redirect(url_for('cms'))
+    
+    uploaded_count = 0
+    for file in files:
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename or "")
+            if filename:
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                uploaded_count += 1
+    
+    flash(f'Successfully uploaded {uploaded_count} files')
+    return redirect(url_for('cms'))
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -97,6 +131,12 @@ class RAGSystem:
         logging.info(f"Initializing RAG system with {llm_model}...")
         self.load_documents()
         self.initialize_chain()
+    
+    def reload(self):
+        logging.info("Reloading knowledge base...")
+        self.load_documents()
+        self.initialize_chain()
+        logging.info("Knowledge base reloaded")
     
     def load_documents(self):
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -183,6 +223,15 @@ def chat():
 @app.route('/api/messages', methods=['GET'])
 def get_messages():
     return jsonify([])
+
+@app.route('/api/reload', methods=['POST'])
+def reload_knowledge_base():
+    try:
+        rag_system.reload()
+        return jsonify({"status": "success", "message": "Knowledge base reloaded"})
+    except Exception as e:
+        logging.error(f"Reload error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

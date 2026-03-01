@@ -64,18 +64,37 @@
                 <div class="documents-view">
                     <div class="documents-header">
                         <h1>Documents</h1>
-                        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            Upload
-                        </button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="upload-btn" onclick="reloadKnowledgeBase()" id="reloadBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                Update KB
+                            </button>
+                            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                Upload Files
+                            </button>
+                            <button class="upload-btn" onclick="document.getElementById('folderInput').click()" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                Upload Folder
+                            </button>
+                        </div>
                     </div>
 
                     <form action="/upload" method="post" enctype="multipart/form-data" id="uploadForm" style="display: none;">
-                        <input type="file" name="file" id="fileInput" accept=".txt,.pdf,.docx,.md,.pptx,.csv" required>
+                        <input type="file" name="file" id="fileInput" accept=".txt,.pdf,.docx,.csv" required>
+                    </form>
+
+                    <form action="/upload-folder" method="post" enctype="multipart/form-data" id="folderForm" style="display: none;">
+                        <input type="file" name="files" id="folderInput" webkitdirectory multiple>
                     </form>
 
                     {% with messages = get_flashed_messages() %}
@@ -135,6 +154,35 @@
                 document.getElementById('uploadForm').submit();
             }
         });
+        
+        document.getElementById('folderInput').addEventListener('change', function() {
+            if (this.files.length > 0) {
+                document.getElementById('folderForm').submit();
+            }
+        });
+        
+        function reloadKnowledgeBase() {
+            const btn = document.getElementById('reloadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Updating...';
+            
+            fetch('/api/reload', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Knowledge base updated!');
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    alert('Error updating knowledge base');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Update KB';
+                });
+        }
     </script>
 </body>
 </html>
