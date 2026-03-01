@@ -1,0 +1,188 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify
+import os
+import logging
+from werkzeug.utils import secure_filename
+from datetime import datetime
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+from langchain.chains import RetrievalQA
+from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
+from langchain_ollama import OllamaLLM
+from langchain_ollama import OllamaEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain_community.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader, CSVLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+app = Flask(__name__)
+app.secret_key = 'supersecretkey'
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['ALLOWED_EXTENSIONS'] = {'txt', 'pdf', 'docx', 'md', 'pptx', 'csv'}
+
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/cms')
+def cms():
+    files = []
+    if os.path.exists(app.config['UPLOAD_FOLDER']):
+        for f in os.listdir(app.config['UPLOAD_FOLDER']):
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], f)
+            if os.path.isfile(filepath):
+                files.append({
+                    'name': f,
+                    'size': os.path.getsize(filepath),
+                    'modified': datetime.fromtimestamp(os.path.getmtime(filepath)).strftime('%Y-%m-%d %H:%M:%S')
+                })
+    files.sort(key=lambda x: x['modified'], reverse=True)
+    return render_template('cms.html', documents=files)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename or "")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        flash('File successfully uploaded')
+        return redirect(url_for('cms'))
+    else:
+        flash('Allowed file types are txt, pdf, docx, md, pptx, csv')
+        return redirect(request.url)
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/delete/<name>')
+def delete_file(name):
+    filename = secure_filename(name)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        flash('File deleted successfully')
+    
+    return redirect(url_for('cms'))
+
+class RAGSystem:
+    def __init__(self, llm_model="qwen2.5:3b", embed_model="bge-m3:latest"):
+        self.embeddings = OllamaEmbeddings(model=embed_model)
+        self.vector_store = None
+        self.qa_chain = None
+        self.llm = OllamaLLM(model=llm_model, temperature=0.1)
+        self.memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            output_key="answer",
+            return_messages=True
+        )
+        logging.info(f"Initializing RAG system with {llm_model}...")
+        self.load_documents()
+        self.initialize_chain()
+    
+    def load_documents(self):
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            return []
+        
+        documents = []
+        for root, dirs, files in os.walk(app.config['UPLOAD_FOLDER']):
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                
+                try:
+                    if filename.endswith('.txt'):
+                        loader = TextLoader(filepath)
+                        docs = loader.load()
+                        documents.extend(docs)
+                        logging.info(f"Loaded {filename}")
+                    elif filename.endswith('.pdf'):
+                        loader = PyPDFLoader(filepath)
+                        docs = loader.load()
+                        documents.extend(docs)
+                        logging.info(f"Loaded {filename}")
+                    elif filename.endswith('.docx'):
+                        loader = Docx2txtLoader(filepath)
+                        docs = loader.load()
+                        documents.extend(docs)
+                        logging.info(f"Loaded {filename}")
+                    elif filename.endswith('.csv'):
+                        loader = CSVLoader(filepath)
+                        docs = loader.load()
+                        documents.extend(docs)
+                        logging.info(f"Loaded {filename}")
+                except Exception as e:
+                    logging.error(f"Error loading {filename}: {e}")
+        
+        if documents:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200
+            )
+            
+            docs = text_splitter.split_documents(documents)
+            self.vector_store = Chroma.from_documents(docs, self.embeddings)
+        
+        return documents
+    
+    def initialize_chain(self):
+        if self.vector_store:
+            try:
+                self.qa_chain = ConversationalRetrievalChain.from_llm(
+                    llm=self.llm,
+                    retriever=self.vector_store.as_retriever(),
+                    memory=self.memory,
+                    return_source_documents=True,
+                    verbose=True
+                )
+                logging.info("Conversational RAG chain initialized")
+            except Exception as e:
+                logging.error(f"Error initializing RAG chain: {e}")
+                self.qa_chain = None
+    
+    def query(self, message):
+        if not message:
+            return {"error": "No message provided"}, 400
+        
+        if self.qa_chain:
+            try:
+                result = self.qa_chain.invoke(message)
+                logging.info(f"Query processed: {message[:30]}...")
+                return {"response": result.get('answer', str(result))}
+            except Exception as e:
+                logging.error(f"Query error: {e}")
+                return {"response": f"Error processing your query: {str(e)}"}, 500
+        else:
+            return {"response": "No documents available for knowledge base. Please upload documents first."}
+
+rag_system = RAGSystem()
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    message = data.get('message', "")
+    return jsonify(rag_system.query(message))
+
+@app.route('/api/messages', methods=['GET'])
+def get_messages():
+    return jsonify([])
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
