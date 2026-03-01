@@ -132,4 +132,4 @@ ollama pull bge-m3:latest
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file.
