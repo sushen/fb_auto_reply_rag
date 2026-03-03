@@ -131,7 +131,7 @@ This is the expected runtime behavior for chat responses:
 
 - `model_used=openai` when OpenAI succeeds.
 - `model_used=llama` when OpenAI fails and LLaMA succeeds.
-- `model_used=local_bot` only if the whole stateful pipeline crashes and final safety fallback is used.
+- `model_used=local_bot` when `wsgi.py` routes continuity fallback to `local_fun_bot.py` (for example when OpenAI and LLaMA are unavailable on Render).
 - If both OpenAI and LLaMA are unavailable, `USE_LOCAL_FUN_BOT_ON_RULE_BASED=true` allows a final continuity attempt via `LOCAL_FUN_BOT_URL`.
 - `local_fun_bot.py` can also generate LLaMA responses itself and persist them to SQLite when Render forwards fallback traffic.
 
@@ -351,7 +351,7 @@ Stop-Process -Id <PID> -Force
 ollama serve
 ```
 
-3. Homepage tester shows echo (`I received: ...`) instead of fun replies
+3. Homepage tester shows echo (`I received: ...`) or generic rule-based reply
    - `local_fun_bot.py` is not reachable.
    - Start local bot on `5001` or set `LOCAL_FUN_BOT_URL`.
 
