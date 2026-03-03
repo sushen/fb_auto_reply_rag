@@ -31,11 +31,13 @@ class Database:
                     user_id INTEGER NOT NULL,
                     role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
                     message_text TEXT NOT NULL,
+                    model_used TEXT,
                     timestamp DATETIME NOT NULL,
                     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
                 """
             )
+            self._ensure_model_used_column(conn)
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_messages_user_timestamp ON messages(user_id, timestamp DESC, id DESC)"
             )
@@ -102,14 +104,14 @@ class Database:
                 (self._utc_now(), user_id),
             )
 
-    def save_message(self, user_id: int, role: str, message_text: str) -> None:
+    def save_message(self, user_id: int, role: str, message_text: str, model_used: str | None = None) -> None:
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO messages (user_id, role, message_text, timestamp)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO messages (user_id, role, message_text, model_used, timestamp)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (user_id, role, message_text, self._utc_now()),
+                (user_id, role, message_text, model_used, self._utc_now()),
             )
 
     def get_recent_messages(self, user_id: int, limit: int = 10) -> list[dict[str, Any]]:
@@ -132,6 +134,13 @@ class Database:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")
         return conn
+
+    @staticmethod
+    def _ensure_model_used_column(conn: sqlite3.Connection) -> None:
+        # Keep existing production DBs compatible by adding the column if missing.
+        columns = {str(row["name"]) for row in conn.execute("PRAGMA table_info(messages)").fetchall()}
+        if "model_used" not in columns:
+            conn.execute("ALTER TABLE messages ADD COLUMN model_used TEXT")
 
     @staticmethod
     def _utc_now() -> str:

@@ -17,15 +17,19 @@ This repo uses two apps:
 Flow:
 
 1. Messenger event hits `wsgi.py` on `/webhook`
-2. `wsgi.py` forwards message to `local_fun_bot.py` on `/process-message`
-3. `local_fun_bot.py` returns a reply
-4. `wsgi.py` sends the reply back through Facebook Graph API
+2. `wsgi.py` loads recent conversation context from SQLite
+3. `wsgi.py` calls `ai_engine.py` with OpenAI as primary model
+4. If OpenAI fails (quota/rate limit/timeout/5xx), `ai_engine.py` falls back to local LLaMA (Ollama)
+5. Reply is saved with `model_used` and sent through Facebook Graph API
+6. If stateful processing fails entirely, `wsgi.py` can still forward to `local_fun_bot.py` as a final safety net
 
 The homepage tester (`POST /chat/reply`) uses the same forwarding logic.
 
 ## Key Files
 
 - `wsgi.py`: main web app, webhook, homepage, settings, privacy policy
+- `ai_engine.py`: OpenAI-first response generation and LLaMA fallback
+- `database.py`: SQLite schema, message persistence, and context retrieval
 - `local_fun_bot.py`: local message processor (`POST /process-message`)
 - `.env.example`: base environment template
 - `render.yaml` and `Procfile`: Render/Gunicorn deployment config
@@ -53,6 +57,27 @@ FB_GRAPH_API_VERSION=v20.0
 WEBHOOK_TIMEOUT_SECONDS=10
 DEFAULT_REPLY=Thanks for your message. We will get back to you shortly.
 
+# Primary/fallback model routing
+USE_FALLBACK=true
+PRIMARY_MODEL=openai
+FALLBACK_MODEL=llama
+CONTEXT_HISTORY_LIMIT=12
+
+# OpenAI
+OPENAI_API_BASE=https://api.openai.com/v1
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_REQUEST_TIMEOUT_SECONDS=20
+OPENAI_FAILURE_THRESHOLD=3
+OPENAI_COOLDOWN_SECONDS=300
+
+# Local LLaMA (Ollama)
+OLLAMA_API_BASE=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:3b
+LLAMA_REQUEST_TIMEOUT_SECONDS=45
+LLAMA_STREAMING=false
+
+# Optional local_fun_bot safety net
 LOCAL_API_KEY=use_the_same_secret_in_both_apps
 LOCAL_FUN_BOT_URL=
 APP_CONFIG_FILE=config.json
@@ -63,11 +88,43 @@ PRIVACY_CONTACT_EMAIL=zrliqi9224@gmail.com
 
 Notes:
 
+- Webhook responses always try `PRIMARY_MODEL` first, then `FALLBACK_MODEL` when enabled.
+- Same role-based context payload is used for both OpenAI and LLaMA providers.
+- Assistant replies are persisted with `model_used` (`openai`, `llama`, or `local_bot`).
+- When OpenAI fails 3 consecutive times (default), it is skipped for 5 minutes (default).
 - `LOCAL_API_KEY` must match in both `wsgi.py` and `local_fun_bot.py`.
 - `LOCAL_FUN_BOT_URL` is optional. If unset in `development`, `wsgi.py` auto-tries:
   - `http://127.0.0.1:5001`
   - `http://localhost:5001`
 - `NGROK_BASE_URL` is saved from `/settings` into `config.json` at runtime.
+
+## Model Experience
+
+This is the expected runtime behavior for chat responses:
+
+1. User sends a message (`/webhook` or homepage `POST /chat/reply`).
+2. System loads recent conversation context from SQLite (`CONTEXT_HISTORY_LIMIT`).
+3. System tries OpenAI first (`PRIMARY_MODEL=openai`).
+4. If OpenAI fails (billing/quota, rate limit, timeout, 5xx), system switches to LLaMA (`FALLBACK_MODEL=llama`).
+5. Reply is sent without interruption and saved in DB.
+
+### What you will see
+
+- `model_used=openai` when OpenAI succeeds.
+- `model_used=llama` when OpenAI fails and LLaMA succeeds.
+- `model_used=local_bot` only if the whole stateful pipeline crashes and final safety fallback is used.
+
+### Verify in database
+
+Run this query against `data/conversations.db`:
+
+```sql
+SELECT u.facebook_id, m.role, m.message_text, m.model_used, m.timestamp
+FROM messages m
+JOIN users u ON u.id = m.user_id
+ORDER BY m.id DESC
+LIMIT 20;
+```
 
 ## Local Setup (Windows PowerShell)
 
