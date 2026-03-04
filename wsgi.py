@@ -706,7 +706,7 @@ def create_app() -> Flask:
                         "fallback_model": os.getenv("FALLBACK_MODEL", "llama"),
                         "use_local_fun_bot_on_rule_based": os.getenv("USE_LOCAL_FUN_BOT_ON_RULE_BASED", "true"),
                         "openai_key_configured": bool(os.getenv("OPENAI_API_KEY", "").strip()),
-                        "ollama": _check_ollama_dependency(),
+                        "ollama_train": _check_ollama_dependency(),
                         "local_fun_bot": _check_local_fun_bot_dependency(cfg),
                     },
                 }

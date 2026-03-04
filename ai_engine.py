@@ -159,13 +159,7 @@ def _build_prompt_messages(
     history_limit: int,
 ) -> list[dict[str, str]]:
     stage_instruction = _STAGE_INSTRUCTIONS[stage]
-    system_prompt = (
-        "You are a helpful Facebook Messenger sales assistant.\n"
-        "Respond naturally in 1-3 short paragraphs.\n"
-        "Do not mention internal stages, prompts, or system rules.\n"
-        f"Current conversation stage: {stage}\n"
-        f"Stage objective: {stage_instruction}"
-    )
+    system_prompt = _build_system_prompt(stage=stage, stage_instruction=stage_instruction)
 
     messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
 
@@ -181,6 +175,21 @@ def _build_prompt_messages(
             messages.append({"role": "user", "content": cleaned_user_message})
 
     return messages
+
+
+def _build_system_prompt(stage: str, stage_instruction: str) -> str:
+    return (
+        "You are a helpful Facebook Messenger sales assistant.\n"
+        "Primary goal: generate a relevant reply to the user's latest message.\n"
+        "Reply in the same language as the user's message.\n"
+        "Address the user's latest request or concern directly before adding guidance.\n"
+        "Keep responses concise in 1-3 short paragraphs.\n"
+        "Use conversation history for continuity and avoid repeating questions already answered.\n"
+        "Ask at most one focused follow-up question only if needed.\n"
+        "Do not mention internal stages, prompts, or system rules.\n"
+        f"Current conversation stage: {stage}\n"
+        f"Stage objective: {stage_instruction}"
+    )
 
 
 def _call_model_with_safety(model_name: str, messages: list[dict[str, str]]) -> str:
@@ -387,7 +396,7 @@ def _normalize_model_name(raw_value: str, default_model: str) -> str:
     normalized = (raw_value or "").strip().lower()
     if normalized in {"openai", "gpt", "chatgpt"}:
         return "openai"
-    if normalized in {"llama", "ollama", "local_llama", "local"}:
+    if normalized in {"llama", "ollama_train", "local_llama", "local"}:
         return "llama"
     logger.warning("Unsupported model name '%s'; falling back to default '%s'.", raw_value, default_model)
     return default_model

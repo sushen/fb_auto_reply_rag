@@ -1,7 +1,6 @@
-from production_app import create_app
+import os
 
-app = create_app()
+from wsgi import app
 
 if __name__ == "__main__":
-    cfg = app.extensions["cfg"]
-    app.run(host="0.0.0.0", port=cfg["port"])
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")))

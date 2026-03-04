@@ -23,7 +23,7 @@ def find_ollama_cmd() -> str | None:
     # 1) Direct PATH lookup
     try:
         completed = subprocess.run(
-            ["where", "ollama"] if sys.platform == "win32" else ["which", "ollama"],
+            ["where", "ollama_train"] if sys.platform == "win32" else ["which", "ollama_train"],
             capture_output=True,
             text=True,
             check=False,
@@ -38,9 +38,9 @@ def find_ollama_cmd() -> str | None:
     # 2) Common Windows install paths
     if sys.platform == "win32":
         candidates = [
-            Path(os.getenv("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama.exe",
-            Path("C:/Program Files/Ollama/ollama.exe"),
-            Path("C:/Program Files (x86)/Ollama/ollama.exe"),
+            Path(os.getenv("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama_train.exe",
+            Path("C:/Program Files/Ollama/ollama_train.exe"),
+            Path("C:/Program Files (x86)/Ollama/ollama_train.exe"),
         ]
         for candidate in candidates:
             if candidate.exists():
@@ -60,7 +60,7 @@ def is_ollama_running(timeout: float = 1.5) -> bool:
 def run_pull(model: str) -> int:
     ollama_cmd = find_ollama_cmd()
     if not ollama_cmd:
-        print("Error: 'ollama' command not found. Install Ollama first.")
+        print("Error: 'ollama_train' command not found. Install Ollama first.")
         return 127
     print(f"Pulling model: {model}")
     return subprocess.call([ollama_cmd, "pull", model])
@@ -79,19 +79,19 @@ def command_start() -> int:
     print("Keep this terminal open while chatting.")
     ollama_cmd = find_ollama_cmd()
     if not ollama_cmd:
-        print("Error: 'ollama' command not found. Install Ollama first.")
+        print("Error: 'ollama_train' command not found. Install Ollama first.")
         return 127
     try:
         return subprocess.call([ollama_cmd, "serve"])
     except FileNotFoundError:
-        print("Error: 'ollama' command not found. Install Ollama first.")
+        print("Error: 'ollama_train' command not found. Install Ollama first.")
         return 127
 
 
 def command_ensure(model: str | None, wait_seconds: int) -> int:
     ollama_cmd = find_ollama_cmd()
     if not ollama_cmd:
-        print("Error: 'ollama' command not found. Install Ollama first.")
+        print("Error: 'ollama_train' command not found. Install Ollama first.")
         return 127
 
     if is_ollama_running():
@@ -107,7 +107,7 @@ def command_ensure(model: str | None, wait_seconds: int) -> int:
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
             )
         except FileNotFoundError:
-            print("Error: 'ollama' command not found. Install Ollama first.")
+            print("Error: 'ollama_train' command not found. Install Ollama first.")
             return 127
 
         started = False
@@ -138,7 +138,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("status", help="Check if Ollama server is running.")
-    sub.add_parser("start", help="Run 'ollama serve' in foreground.")
+    sub.add_parser("start", help="Run 'ollama_train serve' in foreground.")
 
     ensure = sub.add_parser("ensure", help="Ensure server is running and optionally pull model.")
     ensure.add_argument("--model", default=None, help="Optional model name to pull (e.g. qwen2.5:3b).")
