@@ -1,0 +1,136 @@
+{
+  "stage_1_greeting": [
+    {
+      "question": "hello",
+      "answer": "Hello! Welcome to Trading AI. We help people automate Binance trading using our AI trading bot. Would you like to trade automatically, learn algorithmic trading, or earn through our affiliate program?"
+    },
+    {
+      "question": "hi",
+      "answer": "Hi! I'm the Trading AI assistant. Our platform helps users trade automatically on Binance using AI-powered trading bots. What would you like to explore today?"
+    },
+    {
+      "question": "good morning",
+      "answer": "Good morning! Welcome to Trading AI. We specialize in AI-powered Binance trading bots and algorithmic trading education. How can I help you today?"
+    }
+  ],
+
+  "stage_2_identify_interest": [
+    {
+      "question": "I want to trade",
+      "answer": "Great! Our Trading AI bot automatically trades on Binance using algorithmic strategies. Do you want to run the bot yourself or explore passive investment options?"
+    },
+    {
+      "question": "I want to earn",
+      "answer": "You can earn through our affiliate program by sharing the platform. When people join and use Trading AI, you can earn commissions."
+    },
+    {
+      "question": "I want to learn",
+      "answer": "Excellent! We teach algorithmic trading and Python programming so you can build your own trading strategies and trading bots."
+    }
+  ],
+
+  "stage_3_trading_ai_bot": [
+    {
+      "question": "what is trading ai",
+      "answer": "Trading AI is software that automatically trades on Binance using algorithmic trading strategies. It analyzes market conditions and executes trades automatically."
+    },
+    {
+      "question": "how does the bot work",
+      "answer": "The Trading AI bot connects to your Binance account using API keys. It analyzes the market and executes trades automatically based on algorithmic strategies."
+    },
+    {
+      "question": "do i need experience",
+      "answer": "No experience is required. The Trading AI bot is designed to automate trading. We also provide training if you want to learn algorithmic trading yourself."
+    }
+  ],
+
+  "stage_4_learning_program": [
+    {
+      "question": "how can i learn",
+      "answer": "We offer a training program where students learn Python programming and algorithmic trading. You will learn how trading bots work and how to build automated trading strategies."
+    },
+    {
+      "question": "what do you teach",
+      "answer": "Our course teaches Python programming, algorithmic trading concepts, trading strategies, and how to build automated trading systems."
+    },
+    {
+      "question": "is there a course",
+      "answer": "Yes! We offer a structured course that teaches algorithmic trading using Python and real-world trading strategies."
+    }
+  ],
+
+  "stage_5_passive_investment": [
+    {
+      "question": "i don't want to run the bot",
+      "answer": "That's completely fine. If you prefer not to run the bot yourself, you can participate in our investment program and monitor our portfolio performance."
+    },
+    {
+      "question": "can you manage trading",
+      "answer": "Yes. Some users choose to invest and follow our portfolio instead of running the bot themselves."
+    },
+    {
+      "question": "do you have investment options",
+      "answer": "Yes. We provide investment opportunities where users can follow our managed trading portfolio."
+    }
+  ],
+
+  "stage_6_affiliate_program": [
+    {
+      "question": "how can i earn",
+      "answer": "You can earn through our affiliate program by referring others to Trading AI. When people join and use the platform, you can earn commissions."
+    },
+    {
+      "question": "affiliate program",
+      "answer": "Our affiliate program allows you to promote Trading AI and earn commissions when people join through your referral."
+    },
+    {
+      "question": "can i promote this",
+      "answer": "Yes! Many users promote Trading AI and earn commissions through our affiliate system."
+    }
+  ],
+
+  "stage_7_binance_setup": [
+    {
+      "question": "how do i start",
+      "answer": "The first step is creating a Binance account using our referral link: https://www.binance.com/register?ref=35023868. After that, we will guide you on how to connect the Trading AI bot."
+    },
+    {
+      "question": "binance account",
+      "answer": "Please create your Binance account using this link: https://www.binance.com/register?ref=35023868. After registration, we will help you set up the Trading AI bot."
+    },
+    {
+      "question": "create binance",
+      "answer": "You can register on Binance using our link: https://www.binance.com/register?ref=35023868 and then connect the Trading AI bot."
+    }
+  ],
+
+  "stage_8_license_and_community": [
+    {
+      "question": "how do i get the bot",
+      "answer": "To get the Trading AI bot license, please join our Discord community: https://discord.com/invite/GHjeawSYcp and request a license from the support team."
+    },
+    {
+      "question": "where can i ask questions",
+      "answer": "You can join our Discord community to ask questions and request a Trading AI license: https://discord.com/invite/GHjeawSYcp"
+    },
+    {
+      "question": "discord",
+      "answer": "Join our Discord server here: https://discord.com/invite/GHjeawSYcp to connect with our trading community and request your Trading AI license."
+    }
+  ],
+
+  "stage_9_schedule_call": [
+    {
+      "question": "can i talk with someone",
+      "answer": "Yes! We can schedule a call to explain everything about Trading AI, the bot setup, and the training program."
+    },
+    {
+      "question": "appointment",
+      "answer": "You can schedule an appointment with our team to get personal guidance about Trading AI."
+    },
+    {
+      "question": "call",
+      "answer": "We can arrange a call to guide you step-by-step through Binance setup and the Trading AI bot."
+    }
+  ]
+}
