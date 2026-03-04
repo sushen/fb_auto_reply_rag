@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify, session
 import os
 import logging
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from uuid import uuid4
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -118,8 +119,12 @@ rag_system = RAGSystem(upload_folder=app.config['UPLOAD_FOLDER'])
 def chat():
     data = request.get_json()
     message = data.get('message', "")
-    # Web chat doesn't save memory - fresh conversation each time
-    return jsonify(rag_system.query(message, user_id=None))
+    web_user_id = session.get("web_user_id")
+    if not web_user_id:
+        web_user_id = f"web-{uuid4().hex}"
+        session["web_user_id"] = web_user_id
+
+    return jsonify(rag_system.query(message, user_id=web_user_id))
 
 @app.route('/api/messages', methods=['GET'])
 def get_messages():
